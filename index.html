@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>中創園區 | 賽車級太陽能戰情室</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
+    <style>
+        .neon-text {
+            text-shadow: 0 0 10px rgba(250, 204, 21, 0.5), 0 0 20px rgba(250, 204, 21, 0.3);
+        }
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: #1e293b; }
+        ::-webkit-scrollbar-thumb { background: #475569; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #64748b; }
+    </style>
+</head>
+<body class="bg-slate-900 text-slate-100 font-sans min-h-screen">
+
+    <div id="app" class="p-6 max-w-[1600px] mx-auto">
+        <header class="flex justify-between items-end border-b border-slate-700 pb-4 mb-6">
+            <div>
+                <h1 class="text-3xl font-bold text-teal-400 tracking-wider">中創園區太陽能戰情室</h1>
+                <p class="text-slate-400 mt-1">Central Taiwan Innovation Campus Solar Dashboard</p>
+            </div>
+            <div class="text-right flex flex-col items-end">
+                <p class="text-slate-400 text-sm flex items-center">
+                    <span class="relative flex h-2 w-2 mr-2">
+                      <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-400 opacity-75"></span>
+                      <span class="relative inline-flex rounded-full h-2 w-2 bg-cyan-500"></span>
+                    </span>
+                    T-REC 憑證中心同步時間
+                </p>
+                <p class="text-2xl font-mono text-white mt-1">
+                    {{ reportDate }} <span class="text-cyan-400 ml-2 font-bold">{{ lastUpdateTime }}</span>
+                </p>
+            </div>
+        </header>
+
+        <div v-if="error" class="bg-red-900/50 border border-red-500 p-4 rounded-lg text-center mb-6 text-red-300">
+            {{ error }}
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+            <div class="bg-slate-800 rounded-xl p-6 shadow-xl border border-slate-700 flex flex-col justify-center items-center relative overflow-hidden">
+                <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-yellow-400 to-yellow-600"></div>
+                <h2 class="text-xl text-slate-300 mb-4 font-bold">今日全區總發電量</h2>
+                <div class="text-7xl font-bold text-yellow-400 font-mono neon-text my-4">
+                    {{ totalKwh }}
+                </div>
+                <span class="text-xl text-slate-400">kWh (度)</span>
+                
+                <div class="mt-6 flex flex-wrap justify-center gap-3">
+                    <div class="px-4 py-2 bg-slate-900 rounded-full border border-slate-700 text-sm flex items-center">
+                        狀態：<span class="text-green-400 ml-2">🟢 系統連線正常</span>
+                    </div>
+                    <div class="px-4 py-2 bg-slate-900 rounded-full border border-slate-700 text-sm flex items-center">
+                        更新至：<span class="text-cyan-400 ml-2 font-mono font-bold">🕒 {{ lastUpdateTime }}</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-slate-800 rounded-xl p-4 shadow-xl border border-slate-700 flex flex-col items-center justify-center">
+                <h2 class="text-lg text-slate-300 mb-2 font-bold">今年綠電憑證總計</h2>
+                <div id="gauge1" class="w-full h-64"></div>
+            </div>
+
+            <div class="bg-slate-800 rounded-xl p-4 shadow-xl border border-slate-700 flex flex-col items-center justify-center">
+                <h2 class="text-lg text-slate-300 mb-2 font-bold">下一張憑證衝刺進度</h2>
+                <div id="gauge2" class="w-full h-64"></div>
+            </div>
+        </div>
+
+        <div class="bg-slate-800 rounded-xl p-6 shadow-xl border border-slate-700 mb-6">
+            <h2 class="text-xl text-slate-300 mb-4 font-bold">年度發電成效與 YoY 同期比較 (1-4月)</h2>
+            <div id="yoyChart" class="w-full h-72"></div>
+        </div>
+
+        <div class="bg-slate-800 rounded-xl p-6 shadow-xl border border-slate-700 mb-6">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-xl text-slate-300 font-bold">{{ currentChartType === 'power' ? '發電功率時序圖 - 觀察出力強度 (kW)' : '發電量時序圖 - 觀察實質收穫 (kWh)' }}</h2>
+                
+                <div class="flex bg-slate-900 rounded-lg p-1 border border-slate-700">
+                    <button @click="switchChart('power')" :class="currentChartType === 'power' ? 'bg-teal-600 text-white' : 'text-slate-400 hover:text-white'" class="px-4 py-2 rounded-md transition-colors text-sm font-bold">即時功率 (kW)</button>
+                    <button @click="switchChart('energy')" :class="currentChartType === 'energy' ? 'bg-teal-600 text-white' : 'text-slate-400 hover:text-white'" class="px-4 py-2 rounded-md transition-colors text-sm font-bold ml-1">發電量 (kWh)</button>
+                </div>
+            </div>
+            <div id="timeSeriesChart" class="w-full h-96"></div>
+            <p class="text-center text-slate-500 text-sm mt-2">🕒 顯示範圍：06:00 - 18:00</p>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div class="bg-slate-800 rounded-xl shadow-xl border border-slate-700 overflow-hidden">
+                <div class="bg-slate-900 p-4 border-b border-slate-700">
+                    <h2 class="text-lg text-slate-300 font-bold">各子系統今日數據統計</h2>
+                </div>
+                <div class="p-0 overflow-x-auto">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="bg-slate-800/50 text-slate-400 text-sm">
+                                <th class="p-4 border-b border-slate-700 font-medium">系統名稱</th>
+                                <th class="p-4 border-b border-slate-700 font-medium text-right">今日累積 (kWh)</th>
+                                <th class="p-4 border-b border-slate-700 font-medium text-right">最新功率 (W)</th>
+                            </tr>
+                        </thead>
+                        <tbody class="text-slate-200">
+                            <tr v-for="(val, name) in systemData" :key="name" class="hover:bg-slate-700/50 transition-colors">
+                                <td class="p-4 border-b border-slate-700 border-dashed">{{ name }}</td>
+                                <td class="p-4 border-b border-slate-700 border-dashed text-right font-mono text-teal-300">{{ val.toFixed(2) }}</td>
+                                <td class="p-4 border-b border-slate-700 border-dashed text-right font-mono text-slate-400">0</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="bg-slate-800 rounded-xl shadow-xl border border-slate-700 overflow-hidden">
+                <div class="bg-slate-900 p-4 border-b border-slate-700">
+                    <h2 class="text-lg text-slate-300 font-bold">查看雲端原始數據庫 (最新5筆)</h2>
+                </div>
+                <div class="p-0 overflow-x-auto">
+                    <table class="w-full text-left border-collapse whitespace-nowrap">
+                        <thead>
+                            <tr class="bg-slate-800/50 text-slate-400 text-sm">
+                                <th class="p-4 border-b border-slate-700 font-medium">系統名稱</th>
+                                <th class="p-4 border-b border-slate-700 font-medium">紀錄時間</th>
+                                <th class="p-4 border-b border-slate-700 font-medium text-right">當前功率(W)</th>
+                                <th class="p-4 border-b border-slate-700 font-medium text-right">累計度數(kWh)</th>
+                            </tr>
+                        </thead>
+                        <tbody class="text-slate-200">
+                            <tr v-for="row in rawDataPreview" :key="row[1]" class="hover:bg-slate-700/50 transition-colors">
+                                <td class="p-4 border-b border-slate-700 border-dashed">{{ row[0] }}</td>
+                                <td class="p-4 border-b border-slate-700 border-dashed text-slate-400">{{ row[1] }}</td>
+                                <td class="p-4 border-b border-slate-700 border-dashed text-right font-mono">{{ row[4] }}</td>
+                                <td class="p-4 border-b border-slate-700 border-dashed text-right font-mono">{{ row[5] }}</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const { createApp } = Vue;
+
+        createApp({
+            data() {
+                return {
+                    error: null,
+                    reportDate: 'YYYY-MM-DD',
+                    lastUpdateTime: '--:--', // ✨ 儲存最後更新時間的變數
+                    totalKwh: 0,
+                    systemData: {
+                        "鋼構PV (72760059)": 0, "BIPV-1 (67360973)": 0, "BIPV-2 (72760070)": 0, "斜坡PV (67360271)": 0
+                    },
+                    rawDataPreview: [],
+                    currentChartType: 'power',
+                    timeSeriesChartInst: null,
+                    yoyChartInst: null
+                }
+            },
+            mounted() {
+                this.initGauges();
+                this.initYoyChart();
+                this.fetchData();
+            },
+            methods: {
+                async fetchData() {
+                    try {
+                        const response = await fetch('http://localhost:8080/api/solar-data');
+                        const data = await response.json();
+
+                        if (data.status === 'success') {
+                            this.reportDate = data.report_date;
+                            this.totalKwh = data.total_generation_kWh;
+                            this.systemData = data.system_details;
+                            
+                            // ✨ 模擬：等之後 Java 寫好，這裡可以直接抓 API 傳來的最新一筆時間
+                            // 目前先用假資料呈現 15 分鐘的感覺
+                            this.lastUpdateTime = "12:30"; 
+                            
+                            this.rawDataPreview = [
+                                ["鋼構PV (72760059)", `${this.reportDate} ${this.lastUpdateTime}:00`, "220.4", "0.89", "0", "48131.3"],
+                                ["BIPV-1 (67360973)", `${this.reportDate} ${this.lastUpdateTime}:00`, "221.1", "0.02", "0", "86520.1"],
+                                ["BIPV-2 (72760070)", `${this.reportDate} ${this.lastUpdateTime}:00`, "219.8", "0.50", "0", "55120.4"],
+                                ["斜坡PV (67360271)", `${this.reportDate} ${this.lastUpdateTime}:00`, "220.0", "0.10", "0", "32100.9"]
+                            ];
+
+                            this.$nextTick(() => {
+                                this.initTimeSeriesChart();
+                            });
+                        } else {
+                            this.error = data.message;
+                        }
+                    } catch (err) {
+                        this.error = '無法連線到伺服器，請確認 Java 伺服器 (8080) 是否有啟動！';
+                    }
+                },
+                initGauges() {
+                    const gauge1 = echarts.init(document.getElementById('gauge1'));
+                    gauge1.setOption(this.getGaugeOption('張', 58, 210, '#10b981')); 
+
+                    const gauge2 = echarts.init(document.getElementById('gauge2'));
+                    gauge2.setOption(this.getGaugeOption('度', 850, 1000, '#3b82f6')); 
+                },
+                getGaugeOption(unit, value, max, color) {
+                    const remain = max - value;
+                    const remainText = unit === '張' ? `距年度目標還差 ${remain} 張` : `距下一張還差 ${remain} 度`;
+                    const remainColor = unit === '張' ? '#f43f5e' : '#f59e0b'; 
+
+                    return {
+                        title: {
+                            text: `{valueText|${value}} {unitText|${unit}}\n{gapText|⬇ ${remainText}}`,
+                            left: 'center', top: 'center',
+                            textStyle: {
+                                rich: {
+                                    valueText: { color: '#ffffff', fontSize: 48, fontWeight: 'bold', textShadowColor: color, textShadowBlur: 15 },
+                                    unitText: { color: '#cbd5e1', fontSize: 18, padding: [0, 0, 10, 5] },
+                                    gapText: { color: remainColor, fontSize: 14, paddingTop: 15, fontWeight: 'bold' }
+                                }
+                            }
+                        },
+                        series: [
+                            {
+                                type: 'pie', radius: ['70%', '85%'], avoidLabelOverlap: false, label: { show: false }, labelLine: { show: false },
+                                data: [
+                                    { value: value, name: '已達成', itemStyle: { color: color, shadowBlur: 20, shadowColor: color, borderRadius: 10 } },
+                                    { value: remain, name: '未達成', itemStyle: { color: '#334155' } }
+                                ]
+                            }
+                        ]
+                    };
+                },
+                initYoyChart() {
+                    this.yoyChartInst = echarts.init(document.getElementById('yoyChart'));
+                    const months = ['1月', '2月', '3月', '4月'];
+                    const data2025 = [12500, 11200, 14800, 13600]; 
+                    const data2026 = [13100, 11800, 15500, 14200]; 
+
+                    const option = {
+                        tooltip: {
+                            trigger: 'axis',
+                            axisPointer: { type: 'shadow' },
+                            backgroundColor: 'rgba(15, 23, 42, 0.9)',
+                            borderColor: '#334155',
+                            textStyle: { color: '#f8fafc' },
+                            formatter: function (params) {
+                                let val2025 = params[0].value;
+                                let val2026 = params[1].value;
+                                let diff = val2026 - val2025;
+                                let pct = ((diff / val2025) * 100).toFixed(1);
+                                let color = diff >= 0 ? '#10b981' : '#f43f5e';
+                                let sign = diff >= 0 ? '+' : '';
+
+                                return `
+                                    <div class="mb-1 font-bold">${params[0].name} 發電量比較</div>
+                                    ${params[0].marker} 2025年: ${val2025.toLocaleString()} kWh<br/>
+                                    ${params[1].marker} 2026年: ${val2026.toLocaleString()} kWh<br/>
+                                    <div class="mt-2 pt-2 border-t border-slate-600 font-bold" style="color: ${color}">
+                                        YoY 成長: ${sign}${pct}% (${sign}${diff.toLocaleString()} kWh)
+                                    </div>
+                                `;
+                            }
+                        },
+                        legend: { data: ['2025年 (去年)', '2026年 (今年)'], textStyle: { color: '#cbd5e1' }, right: 0 },
+                        grid: { left: '2%', right: '2%', bottom: '0%', containLabel: true },
+                        xAxis: { type: 'category', data: months, axisLabel: { color: '#94a3b8', fontSize: 14 }, axisLine: { lineStyle: { color: '#475569' } } },
+                        yAxis: { type: 'value', name: '(kWh)', nameTextStyle: { color: '#94a3b8' }, axisLabel: { color: '#94a3b8' }, splitLine: { lineStyle: { color: '#334155', type: 'dashed' } } },
+                        series: [
+                            {
+                                name: '2025年 (去年)',
+                                type: 'bar',
+                                barWidth: '15%',
+                                itemStyle: { color: '#475569', borderRadius: [4, 4, 0, 0] },
+                                data: data2025
+                            },
+                            {
+                                name: '2026年 (今年)',
+                                type: 'bar',
+                                barWidth: '15%',
+                                itemStyle: { color: '#3b82f6', borderRadius: [4, 4, 0, 0] },
+                                label: {
+                                    show: true, position: 'top', color: '#10b981', fontWeight: 'bold', fontSize: 14,
+                                    formatter: function(params) {
+                                        let idx = params.dataIndex;
+                                        let pct = (((data2026[idx] - data2025[idx]) / data2025[idx]) * 100).toFixed(1);
+                                        return `+${pct}%`;
+                                    }
+                                },
+                                data: data2026
+                            }
+                        ]
+                    };
+                    this.yoyChartInst.setOption(option);
+                    window.addEventListener('resize', () => this.yoyChartInst.resize());
+                },
+                switchChart(type) {
+                    this.currentChartType = type;
+                    this.initTimeSeriesChart();
+                },
+                initTimeSeriesChart() {
+                    if (this.timeSeriesChartInst) this.timeSeriesChartInst.dispose();
+                    this.timeSeriesChartInst = echarts.init(document.getElementById('timeSeriesChart'));
+
+                    const timeAxis = Array.from({length: 49}, (_, i) => {
+                        const h = Math.floor(i / 4) + 6;
+                        const m = (i % 4) * 15;
+                        return `${h.toString().padStart(2,'0')}:${m.toString().padStart(2,'0')}`;
+                    });
+
+                    const generateData = (peak) => timeAxis.map((t, i) => {
+                        const x = i - 24;
+                        return Math.max(0, (peak * Math.exp(-(x*x)/100)) + (Math.random()*2 - 1)).toFixed(1);
+                    });
+
+                    const isPower = this.currentChartType === 'power';
+                    const multiplier = isPower ? 1 : 0.25;
+
+                    const option = {
+                        tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' }, backgroundColor: 'rgba(15, 23, 42, 0.9)', borderColor: '#334155', textStyle: { color: '#f8fafc' } },
+                        legend: { data: ['BIPV-1', 'BIPV-2', '鋼構PV', '斜坡PV'], textStyle: { color: '#cbd5e1' }, top: 0 },
+                        grid: { left: '3%', right: '4%', bottom: '3%', containLabel: true },
+                        xAxis: { type: 'category', data: timeAxis, axisLabel: { color: '#94a3b8' }, axisLine: { lineStyle: { color: '#475569' } } },
+                        yAxis: { type: 'value', name: isPower ? '(kW)' : '(kWh)', nameTextStyle: { color: '#94a3b8' }, axisLabel: { color: '#94a3b8' }, splitLine: { lineStyle: { color: '#334155', type: 'dashed' } } },
+                        series: [
+                            { name: 'BIPV-1', type: 'bar', stack: 'total', itemStyle: { color: '#2dd4bf' }, data: generateData(50 * multiplier) },
+                            { name: 'BIPV-2', type: 'bar', stack: 'total', itemStyle: { color: '#eab308' }, data: generateData(30 * multiplier) },
+                            { name: '鋼構PV', type: 'bar', stack: 'total', itemStyle: { color: '#f97316' }, data: generateData(20 * multiplier) },
+                            { name: '斜坡PV', type: 'bar', stack: 'total', itemStyle: { color: '#c084fc' }, data: generateData(15 * multiplier) }
+                        ]
+                    };
+                    this.timeSeriesChartInst.setOption(option);
+                    window.addEventListener('resize', () => this.timeSeriesChartInst.resize());
+                }
+            }
+        }).mount('#app');
+    </script>
+</body>
+</html>
