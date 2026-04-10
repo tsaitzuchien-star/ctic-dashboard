@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>中創園區 | 太陽能戰情室</title>
+    <title>中創園區 | 賽車級太陽能戰情室</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
@@ -167,29 +167,38 @@
                 this.fetchData();
             },
             methods: {
-                fetchData() {
-                    // 🚀 【終極防呆版】直接把完美數據寫死在網頁裡，拔掉所有網路連線請求
-                    this.error = null; // 保證清空錯誤訊息
-                    this.reportDate = '2026-04-09';
-                    this.totalKwh = 529.88;
-                    this.systemData = {
-                        "鋼構PV (72760059)": 83.98,
-                        "BIPV-1 (67360973)": 252.88,
-                        "BIPV-2 (72760070)": 136.71,
-                        "斜坡PV (67360271)": 56.31
-                    };
-                    this.lastUpdateTime = "12:30"; 
-                    
-                    this.rawDataPreview = [
-                        ["鋼構PV (72760059)", `${this.reportDate} ${this.lastUpdateTime}:00`, "220.4", "0.89", "0", "48131.3"],
-                        ["BIPV-1 (67360973)", `${this.reportDate} ${this.lastUpdateTime}:00`, "221.1", "0.02", "0", "86520.1"],
-                        ["BIPV-2 (72760070)", `${this.reportDate} ${this.lastUpdateTime}:00`, "219.8", "0.50", "0", "55120.4"],
-                        ["斜坡PV (67360271)", `${this.reportDate} ${this.lastUpdateTime}:00`, "220.0", "0.10", "0", "32100.9"]
-                    ];
+                async fetchData() {
+                    try {
+                        this.error = null;
+                        
+                        // 🚀 已經幫您把專屬的 GAS 網址放進來了！
+                        const gasUrl = 'https://script.google.com/macros/s/AKfycbzu8lu8KzggGoy7fkubE4S7wdLn9-MlAmmrxyTnR6iojKvm7KDyFqYZd4j5wXugcGE/exec';
+                        
+                        const response = await fetch(gasUrl);
+                        const data = await response.json();
 
-                    this.$nextTick(() => {
-                        this.initTimeSeriesChart();
-                    });
+                        if (data.status === 'success') {
+                            this.reportDate = data.report_date;
+                            this.lastUpdateTime = data.last_update_time;
+                            this.totalKwh = data.total_generation_kWh;
+                            this.systemData = data.system_details;
+                            
+                            this.rawDataPreview = [
+                                ["鋼構PV (72760059)", `${this.reportDate} ${this.lastUpdateTime}:00`, "0", this.systemData["鋼構PV (72760059)"] || 0],
+                                ["BIPV-1 (67360973)", `${this.reportDate} ${this.lastUpdateTime}:00`, "0", this.systemData["BIPV-1 (67360973)"] || 0],
+                                ["BIPV-2 (72760070)", `${this.reportDate} ${this.lastUpdateTime}:00`, "0", this.systemData["BIPV-2 (72760070)"] || 0],
+                                ["斜坡PV (67360271)", `${this.reportDate} ${this.lastUpdateTime}:00`, "0", this.systemData["斜坡PV (67360271)"] || 0]
+                            ];
+
+                            this.$nextTick(() => {
+                                this.initTimeSeriesChart();
+                            });
+                        } else {
+                            this.error = data.message || '資料庫回傳異常';
+                        }
+                    } catch (err) {
+                        this.error = '無法連線到資料庫，請確認 Google Apps Script 網址是否正確且已發佈為「所有人」可存取！';
+                    }
                 },
                 initGauges() {
                     const gauge1 = echarts.init(document.getElementById('gauge1'));
