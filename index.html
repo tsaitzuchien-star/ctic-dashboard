@@ -158,13 +158,14 @@
                     latestPowerMap: {}, 
                     timeSeriesMap: {}, 
                     rawDataPreview: [],
+                    certsTotal: 0,       // 🚀 新增：自動接收憑證總數
+                    certsLeftover: 0,    // 🚀 新增：自動接收剩餘度數
                     currentChartType: 'power',
                     timeSeriesChartInst: null,
                     yoyChartInst: null
                 }
             },
             mounted() {
-                this.initGauges();
                 this.initYoyChart();
                 this.fetchData();
             },
@@ -184,9 +185,12 @@
                             this.totalKwh = data.total_generation_kWh;
                             this.systemData = data.system_details;
                             
-                            // 🚀 接收大腦傳來的新資料
                             this.latestPowerMap = data.latest_power_w || {};
                             this.timeSeriesMap = data.time_series_kw || {};
+                            
+                            // 🚀 接收並儲存即時計算的憑證數據
+                            this.certsTotal = data.certs_total || 0;
+                            this.certsLeftover = data.certs_leftover || 0;
                             
                             this.rawDataPreview = [
                                 ["鋼構PV (72760059)", `${this.reportDate} ${this.lastUpdateTime}:00`, this.latestPowerMap["鋼構PV (72760059)"] || 0, this.systemData["鋼構PV (72760059)"] || 0],
@@ -196,6 +200,7 @@
                             ];
 
                             this.$nextTick(() => {
+                                this.initGauges(); // 🚀 資料到了之後才畫憑證圈圈
                                 this.initTimeSeriesChart();
                             });
                         } else {
@@ -207,10 +212,12 @@
                 },
                 initGauges() {
                     const gauge1 = echarts.init(document.getElementById('gauge1'));
-                    gauge1.setOption(this.getGaugeOption('張', 58, 210, '#10b981')); 
+                    // 🚀 換上會變動的變數（取代寫死的 58）
+                    gauge1.setOption(this.getGaugeOption('張', this.certsTotal, 210, '#10b981')); 
 
                     const gauge2 = echarts.init(document.getElementById('gauge2'));
-                    gauge2.setOption(this.getGaugeOption('度', 850, 1000, '#3b82f6')); 
+                    // 🚀 換上會變動的變數（取代寫死的 850）
+                    gauge2.setOption(this.getGaugeOption('度', this.certsLeftover, 1000, '#3b82f6')); 
                 },
                 getGaugeOption(unit, value, max, color) {
                     const remain = max - value;
@@ -317,11 +324,9 @@
                         return `${h.toString().padStart(2,'0')}:${m.toString().padStart(2,'0')}`;
                     });
 
-                    // 🚀 關鍵：讀取真實資料的函數
                     const generateRealData = (sysName) => timeAxis.map(t => {
                         let kw = (this.timeSeriesMap && this.timeSeriesMap[sysName] && this.timeSeriesMap[sysName][t]) ? this.timeSeriesMap[sysName][t] : 0;
                         const isPower = this.currentChartType === 'power';
-                        // 若切換到發電量(kWh)，將功率(kW)換算成15分鐘內的度數
                         return isPower ? kw.toFixed(2) : (kw * 0.25).toFixed(2);
                     });
 
@@ -332,7 +337,6 @@
                         xAxis: { type: 'category', data: timeAxis, axisLabel: { color: '#94a3b8' }, axisLine: { lineStyle: { color: '#475569' } } },
                         yAxis: { type: 'value', name: this.currentChartType === 'power' ? '(kW)' : '(kWh)', nameTextStyle: { color: '#94a3b8' }, axisLabel: { color: '#94a3b8' }, splitLine: { lineStyle: { color: '#334155', type: 'dashed' } } },
                         series: [
-                            // 🚀 替換為真實資料函數
                             { name: 'BIPV-1', type: 'bar', stack: 'total', itemStyle: { color: '#2dd4bf' }, data: generateRealData('BIPV-1 (67360973)') },
                             { name: 'BIPV-2', type: 'bar', stack: 'total', itemStyle: { color: '#eab308' }, data: generateRealData('BIPV-2 (72760070)') },
                             { name: '鋼構PV', type: 'bar', stack: 'total', itemStyle: { color: '#f97316' }, data: generateRealData('鋼構PV (72760059)') },
