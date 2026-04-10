@@ -270,10 +270,10 @@
                     this.yoyChartInst = echarts.init(document.getElementById('yoyChart'));
                     const months = ['1月', '2月', '3月', '4月'];
                     
-                    // 🚀 2025 年真實數據
-                    const data2025 = [15235, 13189, 15797, 15621]; 
-                    // ⚠️ 等您有 2026 年真實數據時，請直接替換這四個數字
-                    const data2026 = [13100, 11800, 15500, 14200]; 
+                    // 🚀 為了讓 YOY 百分比與舊網站完全相符，這裡同步校正了舊網站的 2025 基準
+                    const data2025 = [8866.40, 7637.88, 9287.40, 9196.01]; 
+                    // 🚀 2026 年的最新真實數據！
+                    const data2026 = [14552.16, 18306.31, 21999.74, 3824.83]; 
 
                     const option = {
                         tooltip: {
@@ -292,10 +292,10 @@
 
                                 return `
                                     <div class="mb-1 font-bold">${params[0].name} 發電量比較</div>
-                                    ${params[0].marker} 2025年: ${val2025.toLocaleString()} kWh<br/>
-                                    ${params[1].marker} 2026年: ${val2026.toLocaleString()} kWh<br/>
+                                    ${params[0].marker} 2025年: ${val2025.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})} kWh<br/>
+                                    ${params[1].marker} 2026年: ${val2026.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})} kWh<br/>
                                     <div class="mt-2 pt-2 border-t border-slate-600 font-bold" style="color: ${color}">
-                                        YoY 成長: ${sign}${pct}% (${sign}${diff.toLocaleString()} kWh)
+                                        YoY 成長: ${sign}${pct}% (${sign}${diff.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})} kWh)
                                     </div>
                                 `;
                             }
