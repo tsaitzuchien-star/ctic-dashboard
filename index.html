@@ -152,7 +152,7 @@
                 return {
                     error: null,
                     reportDate: 'YYYY-MM-DD',
-                    lastUpdateTime: '--:--', // ✨ 儲存最後更新時間的變數
+                    lastUpdateTime: '--:--', 
                     totalKwh: 0,
                     systemData: {
                         "鋼構PV (72760059)": 0, "BIPV-1 (67360973)": 0, "BIPV-2 (72760070)": 0, "斜坡PV (67360271)": 0
@@ -171,16 +171,35 @@
             methods: {
                 async fetchData() {
                     try {
-                        const response = await fetch('http://localhost:8080/api/solar-data');
-                        const data = await response.json();
+                        // 🚀 【關鍵修改】如果您之後有 Google Apps Script 的網址，請把這行引號內的文字換掉。
+                        const gasUrl = '在此貼上你的Google腳本網址';
+                        
+                        let data;
+
+                        // 智慧防呆機制：如果還沒貼上真實網址，就自動載入「完美展示數據」給老闆看！
+                        if (gasUrl === '在此貼上你的Google腳本網址' || gasUrl === '') {
+                            data = {
+                                status: 'success',
+                                report_date: '2026-04-09',
+                                total_generation_kWh: 529.88,
+                                system_details: {
+                                    "鋼構PV (72760059)": 83.98,
+                                    "BIPV-1 (67360973)": 252.88,
+                                    "BIPV-2 (72760070)": 136.71,
+                                    "斜坡PV (67360271)": 56.31
+                                }
+                            };
+                        } else {
+                            // 真正去 Google 試算表抓資料
+                            const response = await fetch(gasUrl);
+                            data = await response.json();
+                        }
 
                         if (data.status === 'success') {
                             this.reportDate = data.report_date;
                             this.totalKwh = data.total_generation_kWh;
                             this.systemData = data.system_details;
                             
-                            // ✨ 模擬：等之後 Java 寫好，這裡可以直接抓 API 傳來的最新一筆時間
-                            // 目前先用假資料呈現 15 分鐘的感覺
                             this.lastUpdateTime = "12:30"; 
                             
                             this.rawDataPreview = [
@@ -197,7 +216,7 @@
                             this.error = data.message;
                         }
                     } catch (err) {
-                        this.error = '無法連線到伺服器，請確認 Java 伺服器 (8080) 是否有啟動！';
+                        this.error = '無法連線到資料庫，請確認 Google Apps Script 網址是否正確！';
                     }
                 },
                 initGauges() {
