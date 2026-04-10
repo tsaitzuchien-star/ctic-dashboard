@@ -134,8 +134,8 @@
                             <tr v-for="row in rawDataPreview" :key="row[1]" class="hover:bg-slate-700/50 transition-colors">
                                 <td class="p-4 border-b border-slate-700 border-dashed">{{ row[0] }}</td>
                                 <td class="p-4 border-b border-slate-700 border-dashed text-slate-400">{{ row[1] }}</td>
-                                <td class="p-4 border-b border-slate-700 border-dashed text-right font-mono">{{ row[4] }}</td>
-                                <td class="p-4 border-b border-slate-700 border-dashed text-right font-mono">{{ row[5] }}</td>
+                                <td class="p-4 border-b border-slate-700 border-dashed text-right font-mono">{{ row[2] }}</td>
+                                <td class="p-4 border-b border-slate-700 border-dashed text-right font-mono text-teal-300">{{ row[3] }}</td>
                             </tr>
                         </tbody>
                     </table>
@@ -171,7 +171,6 @@
                     try {
                         this.error = null; 
                         
-                        // 🚀 已經將神經接回真正的 Google 試算表雲端大腦！
                         const gasUrl = 'https://script.google.com/macros/s/AKfycbzu8lu8KzggGoy7fkubE4S7wdLn9-MlAmmrxyTnR6iojKvm7KDyFqYZd4j5wXugcGE/exec';
                         
                         const response = await fetch(gasUrl);
@@ -183,6 +182,7 @@
                             this.totalKwh = data.total_generation_kWh;
                             this.systemData = data.system_details;
                             
+                            // 修正陣列長度，對應 HTML 的 0, 1, 2, 3
                             this.rawDataPreview = [
                                 ["鋼構PV (72760059)", `${this.reportDate} ${this.lastUpdateTime}:00`, "0", this.systemData["鋼構PV (72760059)"] || 0],
                                 ["BIPV-1 (67360973)", `${this.reportDate} ${this.lastUpdateTime}:00`, "0", this.systemData["BIPV-1 (67360973)"] || 0],
@@ -312,6 +312,7 @@
                         return `${h.toString().padStart(2,'0')}:${m.toString().padStart(2,'0')}`;
                     });
 
+                    // ⚠️ 這裡就是產生完美拋物線的數學模擬公式
                     const generateData = (peak) => timeAxis.map((t, i) => {
                         const x = i - 24;
                         return Math.max(0, (peak * Math.exp(-(x*x)/100)) + (Math.random()*2 - 1)).toFixed(1);
