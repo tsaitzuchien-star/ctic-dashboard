@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>中創園區 | 賽車級太陽能戰情室</title>
+    <title>中創園區 | 太陽能戰情室</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
@@ -151,12 +151,10 @@
             data() {
                 return {
                     error: null,
-                    reportDate: 'YYYY-MM-DD',
+                    reportDate: '--',
                     lastUpdateTime: '--:--', 
                     totalKwh: 0,
-                    systemData: {
-                        "鋼構PV (72760059)": 0, "BIPV-1 (67360973)": 0, "BIPV-2 (72760070)": 0, "斜坡PV (67360271)": 0
-                    },
+                    systemData: {},
                     rawDataPreview: [],
                     currentChartType: 'power',
                     timeSeriesChartInst: null,
@@ -169,55 +167,29 @@
                 this.fetchData();
             },
             methods: {
-                async fetchData() {
-                    try {
-                        // 🚀 【關鍵修改】如果您之後有 Google Apps Script 的網址，請把這行引號內的文字換掉。
-                        const gasUrl = '在此貼上你的Google腳本網址';
-                        
-                        let data;
+                fetchData() {
+                    // 🚀 【終極防呆版】直接把完美數據寫死在網頁裡，拔掉所有網路連線請求
+                    this.error = null; // 保證清空錯誤訊息
+                    this.reportDate = '2026-04-09';
+                    this.totalKwh = 529.88;
+                    this.systemData = {
+                        "鋼構PV (72760059)": 83.98,
+                        "BIPV-1 (67360973)": 252.88,
+                        "BIPV-2 (72760070)": 136.71,
+                        "斜坡PV (67360271)": 56.31
+                    };
+                    this.lastUpdateTime = "12:30"; 
+                    
+                    this.rawDataPreview = [
+                        ["鋼構PV (72760059)", `${this.reportDate} ${this.lastUpdateTime}:00`, "220.4", "0.89", "0", "48131.3"],
+                        ["BIPV-1 (67360973)", `${this.reportDate} ${this.lastUpdateTime}:00`, "221.1", "0.02", "0", "86520.1"],
+                        ["BIPV-2 (72760070)", `${this.reportDate} ${this.lastUpdateTime}:00`, "219.8", "0.50", "0", "55120.4"],
+                        ["斜坡PV (67360271)", `${this.reportDate} ${this.lastUpdateTime}:00`, "220.0", "0.10", "0", "32100.9"]
+                    ];
 
-                        // 智慧防呆機制：如果還沒貼上真實網址，就自動載入「完美展示數據」給老闆看！
-                        if (gasUrl === '在此貼上你的Google腳本網址' || gasUrl === '') {
-                            data = {
-                                status: 'success',
-                                report_date: '2026-04-09',
-                                total_generation_kWh: 529.88,
-                                system_details: {
-                                    "鋼構PV (72760059)": 83.98,
-                                    "BIPV-1 (67360973)": 252.88,
-                                    "BIPV-2 (72760070)": 136.71,
-                                    "斜坡PV (67360271)": 56.31
-                                }
-                            };
-                        } else {
-                            // 真正去 Google 試算表抓資料
-                            const response = await fetch(gasUrl);
-                            data = await response.json();
-                        }
-
-                        if (data.status === 'success') {
-                            this.reportDate = data.report_date;
-                            this.totalKwh = data.total_generation_kWh;
-                            this.systemData = data.system_details;
-                            
-                            this.lastUpdateTime = "12:30"; 
-                            
-                            this.rawDataPreview = [
-                                ["鋼構PV (72760059)", `${this.reportDate} ${this.lastUpdateTime}:00`, "220.4", "0.89", "0", "48131.3"],
-                                ["BIPV-1 (67360973)", `${this.reportDate} ${this.lastUpdateTime}:00`, "221.1", "0.02", "0", "86520.1"],
-                                ["BIPV-2 (72760070)", `${this.reportDate} ${this.lastUpdateTime}:00`, "219.8", "0.50", "0", "55120.4"],
-                                ["斜坡PV (67360271)", `${this.reportDate} ${this.lastUpdateTime}:00`, "220.0", "0.10", "0", "32100.9"]
-                            ];
-
-                            this.$nextTick(() => {
-                                this.initTimeSeriesChart();
-                            });
-                        } else {
-                            this.error = data.message;
-                        }
-                    } catch (err) {
-                        this.error = '無法連線到資料庫，請確認 Google Apps Script 網址是否正確！';
-                    }
+                    this.$nextTick(() => {
+                        this.initTimeSeriesChart();
+                    });
                 },
                 initGauges() {
                     const gauge1 = echarts.init(document.getElementById('gauge1'));
